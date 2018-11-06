@@ -85,6 +85,7 @@ class Experiment(Ingredient):
         self.command(print_dependencies, unobserved=True)
         self.command(save_config, unobserved=True)
         self.command(print_named_configs(self), unobserved=True)
+        self.chosen_named_configs = ()
         self.observers = []
         self.current_run = None
         self.captured_out_filter = None
@@ -249,7 +250,7 @@ class Experiment(Ingredient):
 
         cmd_name = args.get('COMMAND') or self.default_command
         config_updates, named_configs = get_config_updates(args['UPDATE'])
-
+        self.chosen_named_configs = named_configs
         err = self._check_command(cmd_name)
         if not args['help'] and err:
             print(short_usage)
