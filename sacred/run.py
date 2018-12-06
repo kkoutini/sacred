@@ -20,7 +20,7 @@ class Run(object):
 
     def __init__(self, config, config_modifications, main_function, observers,
                  root_logger, run_logger, experiment_info, host_info,
-                 pre_run_hooks, post_run_hooks, captured_out_filter=None):
+                 pre_run_hooks, post_run_hooks, captured_out_filter=None, get_command_function=None):
 
         self._id = None
         """The ID of this run as assigned by the first observer"""
@@ -103,6 +103,8 @@ class Run(object):
         self.capture_mode = None
         """Determines the way the stdout/stderr are captured"""
 
+        self.get_command_function = get_command_function
+        """function used to find the commands to be excuted from the run object"""
         self._heartbeat = None
         self._failed_observers = []
         self._output_file = None

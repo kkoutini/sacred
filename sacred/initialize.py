@@ -351,7 +351,6 @@ def get_scaffolding_and_config_name(named_config, scaffolding):
 
 def create_run(experiment, command_name, config_updates=None,
                named_configs=(), force=False, log_level=None):
-
     sorted_ingredients = gather_ingredients_topological(experiment)
     scaffolding = create_scaffolding(experiment, sorted_ingredients)
     # get all split non-empty prefixes sorted from deepest to shallowest
@@ -407,10 +406,13 @@ def create_run(experiment, command_name, config_updates=None,
     pre_runs = [pr for ing in sorted_ingredients for pr in ing.pre_run_hooks]
     post_runs = [pr for ing in sorted_ingredients for pr in ing.post_run_hooks]
 
+    def get_command_function(command_path):
+        return get_command(scaffolding, command_path)
+
     run = Run(config, config_modifications, main_function,
               copy(experiment.observers), root_logger, run_logger,
               experiment_info, host_info, pre_runs, post_runs,
-              experiment.captured_out_filter)
+              experiment.captured_out_filter, get_command_function)
 
     if hasattr(main_function, 'unobserved'):
         run.unobserved = main_function.unobserved
