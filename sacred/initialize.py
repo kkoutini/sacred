@@ -177,7 +177,8 @@ class Scaffold(object):
             if not set(iter_prefixes(add)).intersection(self.captured_args):
                 if self.path:
                     add = join_paths(self.path, add)
-                raise ConfigAddedError(add, config=self.config)
+                self.logger.warning('Added new config entry: "%s"' % add)
+                #raise ConfigAddedError(add, config=self.config)
             else:
                 self.logger.warning('Added new config entry: "%s"' % add)
 
