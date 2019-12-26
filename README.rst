@@ -8,7 +8,7 @@ Sacred
 
 |pypi| |py_versions| |license| |rtfd| |doi|
 
-|unix_build| |windows_build| |coverage| |code_quality| |codacy|
+|build| |coverage| |code_quality| |black|
 
 
 
@@ -91,15 +91,26 @@ optional dependencies but they offer some cool features:
 
 Tests
 -----
-The tests for sacred use the `py.test <http://pytest.org/latest/>`_ package.
-You can execute them by running ``py.test`` in the sacred directory like this:
+The tests for sacred use the `pytest <http://pytest.org/latest/>`_ package.
+You can execute them by running ``pytest`` in the sacred directory like this:
 
-    py.test
+    pytest
 
-There is also a config file for `tox <https://testrun.org/tox/latest/>`_ so you
+There is also a config file for `tox <https://tox.readthedocs.io/en/latest/>`_ so you
 can automatically run the tests for various python versions like this:
 
     tox
+
+Contributing
+------------
+If you find a bug, have a feature request or want to discuss something general you are welcome to open an
+`issue <https://github.com/IDSIA/sacred/issues>`_. If you have a specific question related
+to the usage of sacred, please ask a question on StackOverflow under the
+`python-sacred tag <https://stackoverflow.com/questions/tagged/python-sacred>`_. We value documentation
+a lot. If you find something that should be included in the documentation please
+document it or let us know whats missing. If you are using Sacred in one of your projects and want to share
+your code with others, put your repo in the `Projects using Sacred <docs/projects_using_sacred.rst`>_ list.
+Pull requests are highly welcome!
 
 Frontends
 ---------
@@ -115,6 +126,14 @@ Omniboard is a web dashboard that helps in visualizing the experiments and metri
 Omniboard is written with React, Node.js, Express and Bootstrap.
 
 
+`Incense <https://github.com/JarnoRFB/incense>`_
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+.. image:: docs/images/incense-artifact.png
+.. image:: docs/images/incense-metric.png
+
+Incense is a Python library to retrieve runs stored in a MongoDB and interactively display metrics and artifacts
+in Jupyter notebooks.
+
 `Sacredboard <https://github.com/chovanecm/sacredboard>`_
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 .. image:: docs/images/sacredboard.png
@@ -122,6 +141,26 @@ Omniboard is written with React, Node.js, Express and Bootstrap.
 Sacredboard is a web-based dashboard interface to the sacred runs stored in a
 MongoDB.
 
+`Neptune <https://neptune.ml/>`_
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+.. image:: docs/images/neptune-compare.png
+.. image:: docs/images/neptune-collaboration.png
+
+Neptune is a web service that lets you visualize, organize and compare your experiment runs.
+Once things are logged to Neptune you can share it with others, add comments and even access objects via
+experiment API:
+
+.. image:: docs/images/neptune-query-api.png
+
+In order to log your runs to Neptune, all you need to do is add an observer:
+
+.. code-block:: python
+
+    from neptunecontrib.monitoring.sacred import NeptuneObserver
+    ex.observers.append(NeptuneObserver(api_token='YOUR_API_TOKEN',
+                                        project_name='USER_NAME/PROJECT_NAME'))
+
+For more info, check the `neptune-contrib library <https://neptune-contrib.readthedocs.io/examples/observer_sacred.html>`_.
 
 `SacredBrowser <https://github.com/michaelwand/SacredBrowser>`_
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -208,20 +247,16 @@ in Proceedings of the 15th Python in Science Conference (SciPy 2017), Austin, Te
     :alt: MIT licensed
 
 .. |rtfd| image:: https://readthedocs.org/projects/sacred/badge/?version=latest&style=flat
-    :target: http://sacred.readthedocs.org/
+    :target: https://sacred.readthedocs.io/en/stable/
     :alt: ReadTheDocs
 
 .. |doi| image:: https://zenodo.org/badge/doi/10.5281/zenodo.16386.svg
     :target: http://dx.doi.org/10.5281/zenodo.16386
     :alt: DOI for this release
 
-.. |unix_build| image:: https://img.shields.io/travis/IDSIA/sacred.svg?branch=master&style=flat&label=unix%20build
-    :target: https://travis-ci.org/IDSIA/sacred
-    :alt: Travis-CI Status
-
-.. |windows_build| image:: https://img.shields.io/appveyor/ci/qwlouse/sacred.svg?style=flat&label=windows%20build
-    :target: https://ci.appveyor.com/project/Qwlouse/sacred
-    :alt: appveyor-CI Status
+.. |build| image:: https://dev.azure.com/qwlouse/Sacred%20CI/_apis/build/status/IDSIA.sacred?branchName=master
+    :target: https://dev.azure.com/qwlouse/Sacred%20CI/_build/latest?definitionId=1&branchName=master
+    :alt: Azure CI status
 
 .. |coverage| image:: https://coveralls.io/repos/IDSIA/sacred/badge.svg
     :target: https://coveralls.io/r/IDSIA/sacred
@@ -231,8 +266,6 @@ in Proceedings of the 15th Python in Science Conference (SciPy 2017), Austin, Te
     :target: https://scrutinizer-ci.com/g/IDSIA/sacred/
     :alt: Code Scrutinizer Quality
 
-.. |codacy| image:: https://img.shields.io/codacy/acb7bba4467e47deaf260d6df5c0279f.svg?style=flat
-    :target: https://www.codacy.com/app/qwlouse/sacred
-    :alt: Codacity rating
-
-
+.. |black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
+    :target: https://github.com/ambv/black
+    :alt: Code style: black

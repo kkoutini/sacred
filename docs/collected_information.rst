@@ -46,8 +46,8 @@ available with the run.
 
 The auto-discovery is using inspection of the imported modules and comparing them
 to the local file structure.
-This process should work in >95% of the usecases. But in case it fails one can
-also manually add sourcefiles using :py:meth:`~sacred.Ingredient.add_source_file`.
+This process should work in >95% of the use cases. But in case it fails one can
+also manually add source files using :py:meth:`~sacred.Ingredient.add_source_file`.
 
 The list of sources is accessible through ``run.experiment_info['sources']``.
 It is a list of tuples of the form ``(filename, md5sum)``.
@@ -55,15 +55,17 @@ It can also be inspected using the :ref:`print_dependencies` command.
 
 Version Control
 ---------------
-If the experiment is part of a version control repository, Sacred will also
-try to collect the url of the repository, the current commit hash and if the
+If the experiment is part of a Git repository, Sacred will also
+collect the url of the repository, the current commit hash and whether the
 repository is dirty (has uncommitted changes).
-At the moment Sacred only supports git and only if ``GitPython`` is installed.
 
 This information can be inspected using the :ref:`print_dependencies` command.
 But it is also available from ``run.experiment_info['repositories']``, as a
 list of dictionaries of the form
 ``{'url': URL, 'commit': COMMIT_HASH, 'dirty': True}``.
+
+To disable this, pass ``save_git_info=False`` to the ``Experiment``
+or ``Ingredient`` constructor.
 
 
 Dependencies
@@ -104,13 +106,15 @@ The list of captured ENVIRONMENT variables (empty by default) can be extended
 by appending the relevant keys to ``sacred.SETTINGS.HOST_INFO.CAPTURED_ENV``.
 
 It is possible to extend the host information with custom functions decorated
-by :py:meth:`~sacred.host_info.host_info_getter` like this:
+by :py:meth:`~sacred.host_info.host_info_gatherer` like this:
 
 .. code-block:: python
 
-    from sacred import host_info_getter
+    from sacred import host_info_gatherer
+    from sacred import Experiment
 
-    @host_info_getter
+
+    @host_info_gatherer('host IP address')
     def ip():
         import socket
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -119,7 +123,15 @@ by :py:meth:`~sacred.host_info.host_info_getter` like this:
         s.close()
         return ip
 
-This example will create an ``ip`` entry in the host_info containing the
+
+    ex = Experiment('cool experiment',
+                    additional_host_info=[ip])
+
+    @ex.main
+    def my_main():
+        ...
+
+This example will create an ``host IP address`` entry in the host_info containing the
 IP address of the machine.
 
 Live Information
@@ -148,7 +160,7 @@ Note that, the captured output behaves differently from a console in that
 it doesn't by default interpret control characters like backspace
 (``'\b'``) or carriage return (``'\r'``).
 As an effect, some updating progressbars or the like might me more verbose
-than intended. This behaviour can be changed by adding a custom filter to the
+than intended. This behavior can be changed by adding a custom filter to the
 captured output. To interpret control characters like a console this would do:
 
 .. code-block:: python
@@ -156,6 +168,16 @@ captured output. To interpret control characters like a console this would do:
     from sacred.utils import apply_backspaces_and_linefeeds
 
     ex.captured_out_filter = apply_backspaces_and_linefeeds
+
+Long running and verbose experiments can overload the observer's
+storage backend. For example, the MongoObserver is limited to
+16 MB per run, which can result in experiments being unexpectedly
+terminated. To avoid this you can turn of output capturing by
+applying a custom filter like so
+
+.. code-block:: python
+
+    ex.captured_out_filter = lambda captured_output: "Output capturing turned off."
 
 
 Metrics API
@@ -198,8 +220,7 @@ In any case, the numbers should form an increasing sequence.
             ex.log_scalar("training.diff", value * 2)
 
 
-Currently, the information is collected only by the :ref:`mongo_observer`. Metrics are stored in the ``metrics`` collection
-of MongoDB and are identified by their name (e.g. "training.loss") and the experiment run id they belong to.
+Currently, the information is collected only by two observers: the :ref:`mongo_observer` and the :ref:`file_observer`. For the Mongo Observer, metrics are stored in the ``metrics`` collection of MongoDB and are identified by their name (e.g. "training.loss") and the experiment run id they belong to. For the :ref:`file_observer`, metrics are stored in the file ``metrics.json`` in the run id's directory and are organized by metric name (e.g. "training.loss").
 
 
 Metrics Records

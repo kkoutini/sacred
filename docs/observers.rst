@@ -9,7 +9,7 @@ Observers have a ``priority`` attribute, and are run in order of descending
 priority. The first observer determines the ``_id`` of the run.
 
 
-At the moment there are four observers that are shipped with Sacred:
+At the moment there are seven observers that are shipped with Sacred:
 
  * The main one is the :ref:`mongo_observer` which stores all information in a
    `MongoDB <http://www.mongodb.org/>`_.
@@ -20,6 +20,15 @@ At the moment there are four observers that are shipped with Sacred:
    to store run information in a JSON file. 
  * The :ref:`sql_observer` connects to any SQL database and will store the
    relevant information there.
+ * The :ref:`s3_observer` stores run information in an AWS S3 bucket, within
+   a given prefix/directory
+ * The :ref:`gcs_observer` stores run information in a provided Google Cloud
+   Storage bucket, within a given prefix/directory
+ * The :ref:`queue_observer` can be used to wrap any of the above observers.
+   It will put the processing of observed events on a fault-tolerant 
+   queue in a background process. This is useful for observers that rely
+   on external services such as a database that might be temporarily unavailable.
+
 
 But if you want the run information stored some other way, it is easy to write
 your own :ref:`custom_observer`.
@@ -62,7 +71,7 @@ You can also add it from code like this:
 
     from sacred.observers import MongoObserver
 
-    ex.observers.append(MongoObserver.create())
+    ex.observers.append(MongoObserver())
 
 
 
@@ -72,12 +81,15 @@ Or with server and port:
 
     from sacred.observers import MongoObserver
 
-    ex.observers.append(MongoObserver.create(url='my.server.org:27017',
-                                             db_name='MY_DB'))
+    ex.observers.append(MongoObserver(url='my.server.org:27017',
+                                      db_name='MY_DB'))
 
 This assumes you either have a local MongoDB running or have access to it over
 network without authentication.
 (See `here <http://docs.mongodb.org/manual/installation/>`_ on how to install)
+
+You can setup MongoDB easily with Docker. See the instructions
+in  :ref:`docker_setup` .
 
 Authentication
 --------------
@@ -90,7 +102,7 @@ you want to use. If it can be done by just using the ``MongoDB URI`` then just p
 
     from sacred.observers import MongoObserver
 
-    ex.observers.append(MongoObserver.create(
+    ex.observers.append(MongoObserver(
         url='mongodb://user:password@example.com/the_database?authMechanism=SCRAM-SHA-1',
         db_name='MY_DB'))
 
@@ -100,7 +112,7 @@ If additional arguments need to be passed to the MongoClient they can just be in
 
 .. code-block:: python
 
-    ex.observers.append(MongoObserver.create(
+    ex.observers.append(MongoObserver(
         url="mongodb://<X.509 derived username>@example.com/?authMechanism=MONGODB-X509",
         db_name='MY_DB',
         ssl=True,
@@ -210,7 +222,7 @@ You can, of course, also add it from code like this:
 
     from sacred.observers import FileStorageObserver
 
-    ex.observers.append(FileStorageObserver.create('my_runs'))
+    ex.observers.append(FileStorageObserver('my_runs'))
 
 
 Directory Structure
@@ -288,7 +300,7 @@ the FileStorageObserver like this:
 
     from sacred.observers import FileStorageObserver
 
-    ex.observers.append(FileStorageObserver.create('my_runs', template='/custom/template.txt'))
+    ex.observers.append(FileStorageObserver('my_runs', template='/custom/template.txt'))
 
 The FileStorageObserver will then render that template into a
 ``report.html``/``report.txt`` file in the respective run directory.
@@ -346,7 +358,11 @@ Alternatively, you can also add the observer from code like this:
 
     from sacred.observers import TinyDbObserver
 
-    ex.observers.append(TinyDbObserver.create('my_runs'))
+    ex.observers.append(TinyDbObserver('my_runs'))
+
+    # You can also create this observer from a HashFS and
+    # TinyDB object directly with:
+    ex.observers.append(TinyDbObserver.create_from(my_db, my_fs))
 
 
 Directory Structure
@@ -580,13 +596,88 @@ To add a SqlObserver from python code do:
 
     from sacred.observers import SqlObserver
 
-    ex.observers.append(SqlObserver.create('sqlite:///foo.db'))
+    ex.observers.append(SqlObserver('sqlite:///foo.db'))
+
+    # It's also possible to instantiate a SqlObserver with an existing
+    # engine and session with:
+    ex.observers.append(SqlObserver.create_from(my_engine, my_session))
 
 
 Schema
 ------
 .. image:: images/sql_schema.png
 
+
+.. _s3_observer:
+
+S3 Observer
+============
+The S3Observer stores run information in a designated prefix location within a S3 bucket, either by
+using an existing bucket, or creating a new one. Using the S3Observer requires that boto3 be
+installed, and also that an AWS config file is created with a user's Access Key and Secret Key.
+An easy way to do this is by installing AWS command line tools (``pip install awscli``) and
+running ``aws configure``.
+
+Adding a S3Observer
+--------------------
+
+To create an S3Observer in Python:
+
+.. code-block:: python
+
+    from sacred.observers import S3Observer
+    ex.observers.append(S3Observer(bucket='my-awesome-bucket',
+                                   basedir='/my-project/my-cool-experiment/'))
+
+By default, an S3Observer will use the region that is set in your AWS config file, but if you'd
+prefer to pass in a specific region, you can use the ``region`` parameter of create to do so.
+If you try to create an S3Observer without this parameter, and with region not set in your config
+file, it will error out at the point of the observer object being created.
+
+Directory Structure
+--------------------
+
+S3Observers follow the same conventions as FileStorageObservers when it comes to directory
+structure within a S3 bucket: within ``s3://<bucket>/basedir/`` numeric run directories will be
+created in ascending order, and each run directory will contain the files specified within the
+FileStorageObserver Directory Structure documentation above.
+
+
+Google Cloud Storage Observer
+============
+
+.. note::
+    Requires the `google cloud storage <https://cloud.google.com/storage/docs/reference/libraries/>`_ package.
+    Install with ``pip install google-cloud-storage``.
+
+The Google Cloud Storage Observer allows for experiments to be logged into cloud storage buckets
+provided by Google. In order to use this observer, the user must have created a bucket on the service
+prior to the running an experiment using this observer.
+
+
+Adding a GoogleCloudStorageObserver
+--------------------
+
+To create an GoogleCloudStorageObserver in Python:
+
+.. code-block:: python
+
+    from sacred.observers import GoogleCloudStorageObserver
+    ex.observers.append(GoogleCloudStorageObserver(bucket='bucket-name',
+                                                   basedir='/experiment-name/'))
+
+In order for the observer to correctly connect to the provided bucket, The environment variable
+`` GOOGLE_APPLICATION_CREDENTIALS``  needs to be set by the user. This variable should point to a
+valid JSON file containing Google authorisation credentials
+(see: `Google Cloud authentication <https://cloud.google.com/docs/authentication/getting-started/>`_).
+
+Directory Structure
+--------------------
+
+GoogleCloudStorageObserver follow the same conventions as FileStorageObservers when it comes to directory
+structure within a bucket: within ``gs://<bucket>/basedir/`` numeric run directories will be
+created in ascending order, and each run directory will contain the files specified within the
+FileStorageObserver Directory Structure documentation above.
 
 
 Slack Observer
@@ -610,6 +701,9 @@ of adding a SlackObserver is from a configuration file:
 
     slack_obs = SlackObserver.from_config('slack.json')
     ex.observers.append(slack_obs)
+
+    # You can also instantiate it directly without a config file:
+     slack_obs = SlackObserver(my_webhook_url)
 
 Where ``slack.json`` at least specifies the ``webhook_url``::
 
@@ -679,7 +773,7 @@ or pickle file containing...
   * optionally: ``username`` for proxy.
   * optionally: ``password`` for proxy.
 
-The observer is then added to the experment like this:
+The observer is then added to the experiment like this:
 
 .. code-block:: python
 
@@ -691,6 +785,84 @@ The observer is then added to the experment like this:
 
 To set the bot's profile photo and description, use @BotFather's commands ``/setuserpic`` and ``/setdescription``.
 Note that ``/setuserpic`` requires a *minimum* picture size.
+
+Neptune Observer
+================
+Neptune observer sends all the experiment metadata to the Neptune app.
+It requires the `neptune-contrib <https://neptune-contrib.readthedocs.io/index.html/>`_ package to be installed.
+You can install it by running:
+
+.. code-block:: bash
+
+    pip install neptune-contrib
+
+Adding a Neptune Observer
+-------------------------
+
+NeptuneObserver can only be added from the Python code.
+You simply need to initialize it with your project name and (optionally) api token.
+
+.. code-block:: python
+
+    from neptunecontrib.monitoring.sacred import NeptuneObserver
+    ex.observers.append(NeptuneObserver(api_token='YOUR_API_TOKEN',
+                                        project_name='USER_NAME/PROJECT_NAME'))
+
+.. warning::
+
+    Always keep your API token secret - it is like password to the application.
+    It is recommended to pass your token via the environment variable `NEPTUNE_API_TOKEN`.
+    To make things simple you can put `export NEPTUNE_API_TOKEN=YOUR_LONG_API_TOKEN`
+    line to your `~/.bashrc` or `~/.bash_profile` files.
+
+.. _queue_observer:
+
+Queue Observer
+==============
+
+The `QueueObserver` can be used on top of other existing observers.
+It runs in a background thread. Observed events
+are buffered in a queue and the background thread is woken up to process
+new events at a fixed interval of 20 seconds be default.
+If the processing of an event fails, the event is put back on the queue
+and processed next time. This is useful for observers that rely on
+external services like databases that might become temporarily
+unavailable. Normally, the experiment would fail at this point,
+which could result in long running experiments being unnecessarily
+aborted. The `QueueObserver` can tolerate such temporary problems.
+
+
+However, the `QueueObserver` has currently no way
+of declaring an event as finally failed, so if the failure is not
+due to a temporary unavailability of an external service, the observer
+will try forever.
+
+Adding a Queue Observer
+-------------------------
+
+The ``QueueObserver`` can be used to wrap any other instantiated observer.
+For example, the ``FileStorageObserver`` can be made to use a queue like so
+
+.. code-block:: python
+
+    from sacred.observers import FileStorageObserver, QueueObserver
+
+    fs_observer = FileStorageObserver('my_runs', template='/custom/template.txt')
+    ex.observers.append(QueueObserver(fs_observer)
+
+
+
+For wrapping the :ref:`mongo_observer` a convenience class is provided
+to instantiate the queue based version.
+
+.. code-block:: python
+
+    from sacred.observers import QueuedMongoObserver
+
+    ex.observers.append(
+        QueuedMongoObserver(url="my.server.org:27017", db_name="MY_DB")
+    )
+
 
 Events
 ======
