@@ -24,7 +24,7 @@ SETTINGS = munchify(
             # if true, all dicts and lists in the configuration of a captured
             # function are replaced with a read-only container that raises an
             # Exception if it is attempted to write to those containers
-            "READ_ONLY_CONFIG": True,
+            "READ_ONLY_CONFIG": False,
             # regex patterns to filter out certain IDE or linter directives from
             # inline comments in the documentation
             "IGNORED_COMMENTS": ["^pylint:", "^noinspection"],
