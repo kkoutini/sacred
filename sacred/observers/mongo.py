@@ -463,6 +463,7 @@ def mongo_db_option(args, run):
     """
     kwargs = parse_mongo_db_arg(args)
     mongo = MongoObserver(**kwargs)
+    run.db_identifier = kwargs.get("db_name", "sacred")
     run.observers.append(mongo)
 
 

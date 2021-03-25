@@ -35,6 +35,9 @@ class Run:
         self._id = None
         """The ID of this run as assigned by the first observer"""
 
+        self.db_identifier = ""
+        """The DB identifier of this run as assigned by the first observer"""
+
         self.captured_out = ""
         """Captured stdout and stderr"""
 
