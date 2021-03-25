@@ -496,7 +496,8 @@ def create_run(
         host_info,
         pre_runs,
         post_runs,
-        experiment.captured_out_filter, get_command_function
+        experiment.captured_out_filter,
+        get_command_function,
     )
 
     if hasattr(main_function, "unobserved"):
