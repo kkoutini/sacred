@@ -36,15 +36,15 @@ from sacred.settings import SETTINGS
 
 class Scaffold:
     def __init__(
-            self,
-            config_scopes,
-            subrunners,
-            path,
-            captured_functions,
-            commands,
-            named_configs,
-            config_hooks,
-            generate_seed,
+        self,
+        config_scopes,
+        subrunners,
+        path,
+        captured_functions,
+        commands,
+        named_configs,
+        config_hooks,
+        generate_seed,
     ):
         self.config_scopes = config_scopes
         self.named_configs = named_configs
@@ -53,7 +53,7 @@ class Scaffold:
         self.generate_seed = generate_seed
         self.config_hooks = config_hooks
         self.config_updates = {}
-        self.config_overrides= {}
+        self.config_overrides = {}
         self.named_configs_to_use = []
         self.config = {}
         self.fallback = None
@@ -219,7 +219,7 @@ class Scaffold:
                 if self.path:
                     add = join_paths(self.path, add)
                 self.logger.warning('Added new config entry: "%s"' % add)
-                #raise ConfigAddedError(add, config=self.config)
+                # raise ConfigAddedError(add, config=self.config)
             else:
                 self.logger.warning('Added new config entry: "%s"' % add)
 
@@ -389,7 +389,8 @@ def distribute_top_down_config_override(top_scaff, prefixes, scaffolding):
             path = top_scaff.path + "." + path
         scaffold_name, suffix = find_best_match(path, prefixes)
         scaff = scaffolding[scaffold_name]
-        if scaff == top_scaff: continue
+        if scaff == top_scaff:
+            continue
         update_cfg = {}
         set_by_dotted_path(update_cfg, suffix, value)
         set_by_dotted_path(scaff.config_overrides, suffix, value)
@@ -420,6 +421,10 @@ def create_run(
 ):
     sorted_ingredients = gather_ingredients_topological(experiment)
     scaffolding = create_scaffolding(experiment, sorted_ingredients)
+
+    # dirt fix to allow override of configuration of ingredients from the main experiment.
+    # scaffolding= OrderedDict(reversed(list(scaffolding.items())))
+
     # get all split non-empty prefixes sorted from deepest to shallowest
     prefixes = sorted(
         [s.split(".") for s in scaffolding if s != ""],
@@ -483,7 +488,6 @@ def create_run(
 
     def get_command_function(command_path):
         return get_command(scaffolding, command_path)
-
 
     run = Run(
         config,

@@ -52,8 +52,14 @@ LEGEND = (
     + ")"
 )
 
-ConfigEntry = namedtuple("ConfigEntry", "key value added modified typechanged doc overridden",defaults=(None,)*7)
-PathEntry = namedtuple("PathEntry", "key added modified typechanged doc overridden",defaults=(None,)*6)
+ConfigEntry = namedtuple(
+    "ConfigEntry",
+    "key value added modified typechanged doc overridden",
+    defaults=(None,) * 7,
+)
+PathEntry = namedtuple(
+    "PathEntry", "key added modified typechanged doc overridden", defaults=(None,) * 6
+)
 
 
 def _non_unicode_repr(objekt, context, maxlevels, level):
@@ -205,7 +211,7 @@ def _format_entry(indent, entry):
     elif entry.modified:
         color = COLOR_MODIFIED  # blue
     elif entry.overridden:
-        color = COLOR_OVERRIDEN # yellow
+        color = COLOR_OVERRIDEN  # yellow
     if entry.key == "__doc__":
         color = COLOR_DOC  # grey
         doc_string = entry.value.replace("\n", "\n" + indent)

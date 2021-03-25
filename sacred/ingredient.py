@@ -85,7 +85,7 @@ class Ingredient:
 
     # =========================== Decorators ==================================
     @optional_kwargs_decorator
-    def capture(self, function=None, prefix=None):
+    def capture(self, function=None, prefix=None, static_args={}):
         """
         Decorator to turn a function into a captured function.
 
@@ -98,7 +98,9 @@ class Ingredient:
         """
         if function in self.captured_functions:
             return function
-        captured_function = create_captured_function(function, prefix=prefix)
+        captured_function = create_captured_function(
+            function, prefix=prefix, capturer=self, static_args=static_args
+        )
         self.captured_functions.append(captured_function)
         return captured_function
 
@@ -127,7 +129,7 @@ class Ingredient:
         return cf
 
     @optional_kwargs_decorator
-    def command(self, function=None, prefix=None, unobserved=False):
+    def command(self, function=None, prefix=None, unobserved=False, static_args={}):
         """
         Decorator to define a new command for this Ingredient or Experiment.
 
@@ -142,7 +144,7 @@ class Ingredient:
         A command can be made unobserved (i.e. ignoring all observers) by
         passing the unobserved=True keyword argument.
         """
-        captured_f = self.capture(function, prefix=prefix)
+        captured_f = self.capture(function, prefix=prefix, static_args=static_args)
         captured_f.unobserved = unobserved
         self.commands[function.__name__] = captured_f
         return captured_f

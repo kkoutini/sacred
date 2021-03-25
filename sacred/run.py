@@ -29,7 +29,7 @@ class Run:
         pre_run_hooks,
         post_run_hooks,
         captured_out_filter=None,
-        get_command_function=None
+        get_command_function=None,
     ):
 
         self._id = None
@@ -479,3 +479,19 @@ class Run:
         # update the docstring too!)
 
         self._metrics.log_scalar_metric(metric_name, value, step)
+
+    def get_config_path_value(self, config_path):
+        """
+        Returns the config value following the value of `config_path`
+
+        :param config_path: Example: 'Datasets.training.batch_size'
+
+        """
+        current_config = self.config
+        for step in config_path.split("."):
+            next_config = current_config.get(step)
+            if next_config is None:
+                return next_config
+            # todo maybe if not a dictionary
+            current_config = next_config
+        return next_config

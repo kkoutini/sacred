@@ -6,7 +6,13 @@ from sacred.utils import iter_prefixes, join_paths
 
 class ConfigSummary(dict):
     def __init__(
-            self, added=(), modified=(), typechanged=(), ignored_fallbacks=(), docs=(), overridden=()
+        self,
+        added=(),
+        modified=(),
+        typechanged=(),
+        ignored_fallbacks=(),
+        docs=(),
+        overridden=(),
     ):
         super().__init__()
         self.added = set(added)

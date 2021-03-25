@@ -416,21 +416,24 @@ def get_commit_if_possible(filename, save_git_info):
         is_dirty: bool
             True if there are uncommitted changes in the repository
     """
-    if save_git_info is False:
-        return None, None, None
+    try:
+        if save_git_info is False:
+            return None, None, None
 
-    directory = os.path.dirname(filename)
-    try:
-        repo = Repo(directory, search_parent_directories=True)
-    except InvalidGitRepositoryError:
+        directory = os.path.dirname(filename)
+        try:
+            repo = Repo(directory, search_parent_directories=True)
+        except InvalidGitRepositoryError:
+            return None, None, None
+        try:
+            path = repo.remote().url
+        except ValueError:
+            path = "git:/" + repo.working_dir
+        is_dirty = repo.is_dirty()
+        commit = repo.head.commit.hexsha
+        return path, commit, is_dirty
+    except:
         return None, None, None
-    try:
-        path = repo.remote().url
-    except ValueError:
-        path = "git:/" + repo.working_dir
-    is_dirty = repo.is_dirty()
-    commit = repo.head.commit.hexsha
-    return path, commit, is_dirty
 
 
 @functools.total_ordering

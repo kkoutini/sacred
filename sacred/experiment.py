@@ -37,6 +37,7 @@ from sacred.utils import (
     get_inheritors,
 )
 from sacred.observers.mongo import mongo_db_option
+from sacred.utils import apply_backspaces_and_linefeeds
 
 __all__ = ("Experiment",)
 
@@ -132,7 +133,7 @@ class Experiment(Ingredient):
         self.chosen_named_configs = ()
         self.observers = []
         self.current_run = None
-        self.captured_out_filter = None
+        self.captured_out_filter = apply_backspaces_and_linefeeds
         """Filter function to be applied to captured output of a run"""
         self.option_hooks = []
 
@@ -513,6 +514,7 @@ class Experiment(Ingredient):
         info=None,
         meta_info=None,
         options=None,
+        dry_run=False,
     ):
         command_name = command_name or self.default_command
         if command_name is None:
@@ -538,6 +540,8 @@ class Experiment(Ingredient):
             force=options.get(commandline_options.force_option.get_flag(), False),
             log_level=options.get(commandline_options.loglevel_option.get_flag(), None),
         )
+        if dry_run:
+            return run
         if info is not None:
             run.info.update(info)
 

@@ -137,3 +137,18 @@ def undogmatize(obj):
         return tuple(undogmatize(value) for value in obj)
     else:
         return obj
+
+
+class CMD(str):
+    def __new__(CMD, *args, **kw):
+        """
+            Defines a new CMD config.
+            If the command string starts with '/', command not ingredient specific, and will be executed globally (removing the / char)
+            If it starts with '.', command has a relative path to the current ing
+        :param args:
+        :param kw:
+        """
+        return str.__new__(CMD, *args, **kw)
+
+    def __repr__(self):
+        return "{CMD!}" + str.__repr__(self)
