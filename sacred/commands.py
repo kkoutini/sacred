@@ -25,6 +25,7 @@ COLOR_DIRTY = Fore.RED
 COLOR_TYPECHANGED = Fore.RED  # prepend Style.BRIGHT for bold
 COLOR_ADDED = Fore.GREEN
 COLOR_MODIFIED = Fore.BLUE
+COLOR_OVERRIDEN = Fore.YELLOW
 COLOR_DOC = Style.DIM
 ENDC = Style.RESET_ALL  # '\033[0m'
 
@@ -40,6 +41,9 @@ LEGEND = (
     + ", "
     + COLOR_TYPECHANGED
     + "typechanged"
+    + ", "
+    + COLOR_OVERRIDEN
+    + "overridden"
     + ENDC
     + ", "
     + COLOR_DOC
@@ -48,8 +52,8 @@ LEGEND = (
     + ")"
 )
 
-ConfigEntry = namedtuple("ConfigEntry", "key value added modified typechanged doc")
-PathEntry = namedtuple("PathEntry", "key added modified typechanged doc")
+ConfigEntry = namedtuple("ConfigEntry", "key value added modified typechanged doc overridden",defaults=(None,)*7)
+PathEntry = namedtuple("PathEntry", "key added modified typechanged doc overridden",defaults=(None,)*6)
 
 
 def _non_unicode_repr(objekt, context, maxlevels, level):
@@ -187,6 +191,7 @@ def _iterate_marked(cfg, config_mods):
                 modified=path in config_mods.modified,
                 typechanged=config_mods.typechanged.get(path),
                 doc=config_mods.docs.get(path),
+                overridden=path in config_mods.overridden,
             )
 
 
@@ -199,6 +204,8 @@ def _format_entry(indent, entry):
         color = COLOR_ADDED  # green
     elif entry.modified:
         color = COLOR_MODIFIED  # blue
+    elif entry.overridden:
+        color = COLOR_OVERRIDEN # yellow
     if entry.key == "__doc__":
         color = COLOR_DOC  # grey
         doc_string = entry.value.replace("\n", "\n" + indent)

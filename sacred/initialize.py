@@ -36,15 +36,15 @@ from sacred.settings import SETTINGS
 
 class Scaffold:
     def __init__(
-        self,
-        config_scopes,
-        subrunners,
-        path,
-        captured_functions,
-        commands,
-        named_configs,
-        config_hooks,
-        generate_seed,
+            self,
+            config_scopes,
+            subrunners,
+            path,
+            captured_functions,
+            commands,
+            named_configs,
+            config_hooks,
+            generate_seed,
     ):
         self.config_scopes = config_scopes
         self.named_configs = named_configs
@@ -53,6 +53,7 @@ class Scaffold:
         self.generate_seed = generate_seed
         self.config_hooks = config_hooks
         self.config_updates = {}
+        self.config_overrides= {}
         self.named_configs_to_use = []
         self.config = {}
         self.fallback = None
@@ -147,7 +148,8 @@ class Scaffold:
 
     def get_config_modifications(self):
         self.config_mods = ConfigSummary(
-            added={key for key, value in iterate_flattened(self.config_updates)}
+            added={key for key, value in iterate_flattened(self.config_updates)},
+            overridden={key for key, value in iterate_flattened(self.config_overrides)},
         )
         for cfg_summary in self.summaries:
             self.config_mods.update_from(cfg_summary)
@@ -380,6 +382,20 @@ def distribute_config_updates(prefixes, scaffolding, config_updates):
         set_by_dotted_path(scaff.config_updates, suffix, value)
 
 
+def distribute_top_down_config_override(top_scaff, prefixes, scaffolding):
+    config_updates = top_scaff.config
+    for path, value in iterate_flattened(config_updates):
+        if top_scaff.path != "":
+            path = top_scaff.path + "." + path
+        scaffold_name, suffix = find_best_match(path, prefixes)
+        scaff = scaffolding[scaffold_name]
+        if scaff == top_scaff: continue
+        update_cfg = {}
+        set_by_dotted_path(update_cfg, suffix, value)
+        set_by_dotted_path(scaff.config_overrides, suffix, value)
+        scaff.config_scopes.append(ConfigDict(update_cfg))
+
+
 def get_scaffolding_and_config_name(named_config, scaffolding):
     if os.path.exists(named_config):
         path, cfg_name = "", named_config
@@ -429,6 +445,13 @@ def create_run(
             set_by_dotted_path(config_updates, join_paths(scaff.path, ncfg_key), value)
 
     distribute_config_updates(prefixes, scaffolding, config_updates)
+
+    # @ADDED: allow ingredients to override sub ingredients default config
+    # Phase extra: propagate configuration down to ingredients
+    for scaffold in reversed(list(scaffolding.values())):
+        scaffold.gather_fallbacks()
+        scaffold.set_up_config()
+        distribute_top_down_config_override(scaffold, prefixes, scaffolding)
 
     # Phase 3: Normal config scopes
     for scaffold in scaffolding.values():

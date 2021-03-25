@@ -6,11 +6,12 @@ from sacred.utils import iter_prefixes, join_paths
 
 class ConfigSummary(dict):
     def __init__(
-        self, added=(), modified=(), typechanged=(), ignored_fallbacks=(), docs=()
+            self, added=(), modified=(), typechanged=(), ignored_fallbacks=(), docs=(), overridden=()
     ):
         super().__init__()
         self.added = set(added)
         self.modified = set(modified)  # TODO: test for this member
+        self.overridden = set(overridden)  # TODO: test for this member
         self.typechanged = dict(typechanged)
         self.ignored_fallbacks = set(ignored_fallbacks)  # TODO: test
         self.docs = dict(docs)
@@ -33,9 +34,11 @@ class ConfigSummary(dict):
     def update_add(self, config_mod, path=""):
         added = config_mod.added
         updated = config_mod.modified
+        overridden = config_mod.overridden
         typechanged = config_mod.typechanged
         self.added |= {join_paths(path, a) for a in added}
         self.modified |= {join_paths(path, u) for u in updated}
+        self.overridden |= {join_paths(path, u) for u in overridden}
         self.typechanged.update(
             {join_paths(path, k): v for k, v in typechanged.items()}
         )
