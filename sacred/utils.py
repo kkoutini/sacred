@@ -15,6 +15,7 @@ from functools import partial
 from packaging import version
 from typing import Union
 from pathlib import Path
+from sacred.config_helpers import DynamicIngredient
 
 import wrapt
 
@@ -44,6 +45,7 @@ __all__ = [
     "IntervalTimer",
     "PathType",
 ]
+
 
 NO_LOGGER = logging.getLogger("ignore")
 NO_LOGGER.disabled = 1
@@ -372,7 +374,10 @@ def iterate_flattened_separately(dictionary, manually_sorted_keys=None):
 
     for key, value in sorted(dictionary.items(), key=get_order):
         if is_non_empty_dict(value):
-            yield key, PATHCHANGE
+            if isinstance(value, DynamicIngredient):
+                yield "{DI@" + value.path.replace(".", ":") + "}" + key, PATHCHANGE
+            else:
+                yield key, PATHCHANGE
             for k, val in iterate_flattened_separately(value, manually_sorted_keys):
                 yield join_paths(key, k), val
         else:
@@ -391,6 +396,8 @@ def iterate_flattened(d):
     """
     for key in sorted(d.keys()):
         value = d[key]
+        if isinstance(value, DynamicIngredient) and value:
+            yield key, value
         if isinstance(value, dict) and value:
             for k, v in iterate_flattened(d[key]):
                 yield join_paths(key, k), v
@@ -421,7 +428,16 @@ def set_by_dotted_path(d, path, value):
         if p not in current_option:
             current_option[p] = dict()
         current_option = current_option[p]
-    current_option[split_path[-1]] = value
+    if (
+        isinstance(value, DynamicIngredient)
+        and current_option.get(split_path[-1]) is not None
+        and isinstance(current_option[split_path[-1]], dict)
+    ):
+        current_option[split_path[-1]] = DynamicIngredient(
+            value.path, **current_option[split_path[-1]]
+        )
+    else:
+        current_option[split_path[-1]] = value
 
 
 def get_by_dotted_path(d, path, default=None):

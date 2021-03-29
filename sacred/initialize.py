@@ -4,6 +4,7 @@
 import os
 from collections import OrderedDict, defaultdict
 from copy import copy, deepcopy
+from importlib import import_module, reload
 
 from sacred.config import (
     ConfigDict,
@@ -14,6 +15,7 @@ from sacred.config import (
 )
 from sacred.config.config_summary import ConfigSummary
 from sacred.config.custom_containers import make_read_only
+from sacred.config_helpers import DynamicIngredient
 from sacred.host_info import get_host_info
 from sacred.randomness import create_rnd, get_seed
 from sacred.run import Run
@@ -378,6 +380,8 @@ def distribute_presets(prefixes, scaffolding, config_updates):
 def distribute_config_updates(prefixes, scaffolding, config_updates):
     for path, value in iterate_flattened(config_updates):
         scaffold_name, suffix = find_best_match(path, prefixes)
+        if suffix == "":
+            continue
         scaff = scaffolding[scaffold_name]
         set_by_dotted_path(scaff.config_updates, suffix, value)
 
@@ -389,7 +393,7 @@ def distribute_top_down_config_override(top_scaff, prefixes, scaffolding):
             path = top_scaff.path + "." + path
         scaffold_name, suffix = find_best_match(path, prefixes)
         scaff = scaffolding[scaffold_name]
-        if scaff == top_scaff:
+        if scaff == top_scaff or suffix == "":
             continue
         update_cfg = {}
         set_by_dotted_path(update_cfg, suffix, value)
@@ -411,6 +415,17 @@ def get_scaffolding_and_config_name(named_config, scaffolding):
     return scaff, cfg_name
 
 
+def sorted_found_ingredients_dict_by_path(found_dynamic_ingredients):
+    return [
+        v
+        for _, v in sorted(
+            found_dynamic_ingredients.items(),
+            key=lambda x: len(x[0].split(".")),
+            reverse=True,
+        )
+    ]
+
+
 def create_run(
     experiment,
     command_name,
@@ -418,12 +433,52 @@ def create_run(
     named_configs=(),
     force=False,
     log_level=None,
+    include_dynamic_ingredient=True,
+    included_dynamic_ingredient=[],
 ):
-    sorted_ingredients = gather_ingredients_topological(experiment)
-    scaffolding = create_scaffolding(experiment, sorted_ingredients)
+    sorted_ingredients = included_dynamic_ingredient + gather_ingredients_topological(
+        experiment
+    )
+    if include_dynamic_ingredient:
+        last_len = -1
+        found_dynamic_ingredients = {}
+        while len(found_dynamic_ingredients) > last_len:
+            last_len = len(found_dynamic_ingredients)
+            prerun = create_run(
+                experiment,
+                command_name,
+                config_updates,
+                named_configs,
+                force,
+                log_level,
+                include_dynamic_ingredient=False,
+                included_dynamic_ingredient=sorted_found_ingredients_dict_by_path(
+                    found_dynamic_ingredients
+                ),
+            )
+            for cpath, ing in iterate_over_dynamic_ingredients(prerun.config):
+                # use relaod to get a new instance of the ingredient, in case you want to use it twice.
+                try:
+                    dyn_ing = getattr(
+                        reload(import_module(ing.path.rsplit(".", 1)[0])),
+                        ing.path.rsplit(".", 1)[1],
+                    )
+                except Exception as e:
+                    raise RuntimeError(
+                        f"Could not dynamically load ingredient specified in config path `{cpath}`. "
+                        f"Make sure `{ing.path}` is importable in your python path. "
+                        f"This can be tested: `from {ing.path.rsplit('.', 1)[0]} "
+                        f"import {ing.path.rsplit('.', 1)[1]}`"
+                    ) from e
+                dyn_ing.path = cpath
+                found_dynamic_ingredients[cpath] = dyn_ing
 
-    # dirt fix to allow override of configuration of ingredients from the main experiment.
-    # scaffolding= OrderedDict(reversed(list(scaffolding.items())))
+        sorted_ingredients = (
+            sorted_found_ingredients_dict_by_path(found_dynamic_ingredients)
+            + sorted_ingredients
+        )
+
+    scaffolding = create_scaffolding(experiment, sorted_ingredients)
 
     # get all split non-empty prefixes sorted from deepest to shallowest
     prefixes = sorted(
@@ -440,6 +495,12 @@ def create_run(
     root_logger, run_logger = initialize_logging(experiment, scaffolding, log_level)
     distribute_config_updates(prefixes, scaffolding, config_updates)
 
+    # Report the dynamically created ingredients
+    if include_dynamic_ingredient:
+        for dyn_ing in sorted_found_ingredients_dict_by_path(found_dynamic_ingredients):
+            root_logger.info(
+                f"Dynamically created ingredient {dyn_ing.path}, loaded from {2} "
+            )
     # Phase 2: Named Configs
     for ncfg in named_configs:
         scaff, cfg_name = get_scaffolding_and_config_name(ncfg, scaffolding)
@@ -513,3 +574,22 @@ def create_run(
         scaffold.finalize_initialization(run=run)
 
     return run
+
+
+def iterate_over_dynamic_ingredients(d):
+    """
+    Recursively iterate over the items of a dictionary.
+
+    Provides a full dotted paths for every leaf.
+    """
+    for key in sorted(d.keys()):
+        value = d[key]
+        # BFS
+        if isinstance(value, DynamicIngredient):
+            yield key, value
+    # second loop for BFS, get ingredients sorted by depth
+    for key in sorted(d.keys()):
+        value = d[key]
+        if isinstance(value, dict) and value:
+            for k, v in iterate_over_dynamic_ingredients(d[key]):
+                yield join_paths(key, k), v

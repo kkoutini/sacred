@@ -542,6 +542,7 @@ class Experiment(Ingredient):
         )
         if dry_run:
             return run
+
         if info is not None:
             run.info.update(info)
 

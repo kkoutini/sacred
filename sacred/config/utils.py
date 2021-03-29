@@ -5,6 +5,7 @@ import jsonpickle.tags
 
 from sacred import SETTINGS
 import sacred.optional as opt
+from sacred.config_helpers import DynamicIngredient
 from sacred.config.custom_containers import DogmaticDict, DogmaticList
 from sacred.utils import PYTHON_IDENTIFIER
 
@@ -37,7 +38,7 @@ def assert_is_valid_key(key):
 
     """
     if SETTINGS.CONFIG.ENFORCE_KEYS_MONGO_COMPATIBLE and (
-        isinstance(key, str) and ("." in key or key[0] == "$")
+        isinstance(key, str) and ("." in key or len(key) == 0 or key[0] == "$")
     ):
         raise KeyError(
             'Invalid key "{}". Config-keys cannot '
@@ -84,6 +85,8 @@ def normalize_numpy(obj):
 def normalize_or_die(obj):
     if isinstance(obj, dict):
         res = dict()
+        if isinstance(obj, DynamicIngredient):
+            res = DynamicIngredient(obj.path)
         for key, value in obj.items():
             assert_is_valid_key(key)
             res[key] = normalize_or_die(value)
@@ -97,6 +100,12 @@ def recursive_fill_in(config, preset):
     for key in preset:
         if key not in config:
             config[key] = preset[key]
+        elif not isinstance(config[key], DynamicIngredient) and isinstance(
+            preset[key], DynamicIngredient
+        ):
+            # inherit the path from preset
+            config[key] = DynamicIngredient(path=preset[key].path, **config[key])
+            recursive_fill_in(config[key], preset[key])
         elif isinstance(config[key], dict) and isinstance(preset[key], dict):
             recursive_fill_in(config[key], preset[key])
 
@@ -118,7 +127,9 @@ def chain_evaluate_config_scopes(config_scopes, fixed=None, preset=None, fallbac
 
 
 def dogmatize(obj):
-    if isinstance(obj, dict):
+    if isinstance(obj, DynamicIngredient):
+        return obj
+    elif isinstance(obj, dict):
         return DogmaticDict({key: dogmatize(val) for key, val in obj.items()})
     elif isinstance(obj, list):
         return DogmaticList([dogmatize(value) for value in obj])
@@ -137,18 +148,3 @@ def undogmatize(obj):
         return tuple(undogmatize(value) for value in obj)
     else:
         return obj
-
-
-class CMD(str):
-    def __new__(CMD, *args, **kw):
-        """
-            Defines a new CMD config.
-            If the command string starts with '/', command not ingredient specific, and will be executed globally (removing the / char)
-            If it starts with '.', command has a relative path to the current ing
-        :param args:
-        :param kw:
-        """
-        return str.__new__(CMD, *args, **kw)
-
-    def __repr__(self):
-        return "{CMD!}" + str.__repr__(self)

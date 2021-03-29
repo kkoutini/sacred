@@ -6,10 +6,10 @@ import types
 from datetime import timedelta
 
 import wrapt
+from sacred.config import CMD
 
 from sacred.config.custom_containers import fallback_dict
 from sacred.config.signature import Signature
-from sacred.config.utils import CMD
 from sacred.randomness import create_rnd, get_seed
 from sacred.utils import ConfigError
 

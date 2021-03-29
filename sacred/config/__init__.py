@@ -2,6 +2,7 @@
 # coding=utf-8
 
 from sacred.config.config_dict import ConfigDict
+from sacred.config_helpers import CMD, DynamicIngredient
 from sacred.config.config_scope import ConfigScope
 from sacred.config.config_files import load_config_file, save_config_file
 from sacred.config.captured_function import create_captured_function
@@ -16,4 +17,6 @@ __all__ = (
     "chain_evaluate_config_scopes",
     "dogmatize",
     "undogmatize",
+    "CMD",
+    "DynamicIngredient",
 )
