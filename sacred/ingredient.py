@@ -64,7 +64,8 @@ class Ingredient:
         self.commands = OrderedDict()
         # capture some context information
         _caller_globals = _caller_globals or inspect.stack()[1][0].f_globals
-        mainfile_dir = os.path.dirname(_caller_globals.get("__file__", "."))
+        #mainfile_dir = os.path.dirname(_caller_globals.get("__file__", "."))
+        mainfile_dir = os.getcwd()
         self.base_dir = os.path.abspath(base_dir or mainfile_dir)
         self.save_git_info = save_git_info
         self.doc = _caller_globals.get("__doc__", "")

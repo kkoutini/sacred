@@ -62,6 +62,7 @@ class Experiment(Ingredient):
         additional_host_info: Optional[List[HostInfoGetter]] = None,
         additional_cli_options: Optional[Sequence[CLIOption]] = None,
         save_git_info: bool = True,
+        caller_globals=None
     ):
         """
         Create a new experiment with the given name and optional ingredients.
@@ -101,7 +102,8 @@ class Experiment(Ingredient):
         self.all_cli_options = (
             gather_command_line_options() + self.additional_cli_options
         )
-        caller_globals = inspect.stack()[1][0].f_globals
+        if caller_globals is None:
+            caller_globals = inspect.stack()[1][0].f_globals
         if name is None:
             if interactive:
                 raise RuntimeError("name is required in interactive mode.")
