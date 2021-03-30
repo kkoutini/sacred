@@ -442,6 +442,7 @@ def create_run(
     if include_dynamic_ingredient:
         last_len = -1
         found_dynamic_ingredients = {}
+        found_dynamic_ingredients_load_paths= {}
         while len(found_dynamic_ingredients) > last_len:
             last_len = len(found_dynamic_ingredients)
             prerun = create_run(
@@ -472,7 +473,7 @@ def create_run(
                     ) from e
                 dyn_ing.path = cpath
                 found_dynamic_ingredients[cpath] = dyn_ing
-
+                found_dynamic_ingredients_load_paths[cpath]=ing.path
         sorted_ingredients = (
             sorted_found_ingredients_dict_by_path(found_dynamic_ingredients)
             + sorted_ingredients
@@ -499,7 +500,7 @@ def create_run(
     if include_dynamic_ingredient:
         for dyn_ing in sorted_found_ingredients_dict_by_path(found_dynamic_ingredients):
             root_logger.info(
-                f"Dynamically created ingredient {dyn_ing.path}, loaded from {2} "
+                f"Dynamically created ingredient `{dyn_ing.path}`, loaded from `{found_dynamic_ingredients_load_paths[dyn_ing.path]}` "
             )
     # Phase 2: Named Configs
     for ncfg in named_configs:
@@ -572,7 +573,9 @@ def create_run(
 
     for scaffold in scaffolding.values():
         scaffold.finalize_initialization(run=run)
-
+    # finally set current_run
+    for ing in sorted_ingredients:
+        ing.current_run = run
     return run
 
 

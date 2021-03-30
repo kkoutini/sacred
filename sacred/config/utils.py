@@ -6,7 +6,7 @@ import jsonpickle.tags
 from sacred import SETTINGS
 import sacred.optional as opt
 from sacred.config_helpers import DynamicIngredient
-from sacred.config.custom_containers import DogmaticDict, DogmaticList
+from sacred.config.custom_containers import DogmaticDict, DogmaticList, DogmaticDynamicIngredient
 from sacred.utils import PYTHON_IDENTIFIER
 
 
@@ -128,7 +128,7 @@ def chain_evaluate_config_scopes(config_scopes, fixed=None, preset=None, fallbac
 
 def dogmatize(obj):
     if isinstance(obj, DynamicIngredient):
-        return obj
+        return DogmaticDynamicIngredient(path=obj.path ,**{key: dogmatize(val) for key, val in obj.items()})
     elif isinstance(obj, dict):
         return DogmaticDict({key: dogmatize(val) for key, val in obj.items()})
     elif isinstance(obj, list):
@@ -140,7 +140,9 @@ def dogmatize(obj):
 
 
 def undogmatize(obj):
-    if isinstance(obj, DogmaticDict):
+    if isinstance(obj, DogmaticDynamicIngredient):
+        return DynamicIngredient(path=obj.path, **{key: undogmatize(value) for key, value in obj.items()})
+    elif isinstance(obj, DogmaticDict):
         return dict({key: undogmatize(value) for key, value in obj.items()})
     elif isinstance(obj, DogmaticList):
         return list([undogmatize(value) for value in obj])

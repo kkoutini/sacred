@@ -3,6 +3,7 @@
 import copy
 
 import sacred.optional as opt
+from sacred.config_helpers import DynamicIngredient
 from sacred.utils import join_paths, SacredError
 
 
@@ -63,8 +64,18 @@ class DogmaticDict(dict):
         dict.__setitem__(self, key, fixed_value)
         # if both are dicts do a recursive update
         if isinstance(fixed_value, DogmaticDict) and isinstance(value, dict):
+            if not isinstance(fixed_value, DogmaticDynamicIngredient) and \
+                    (isinstance(value, DynamicIngredient) or isinstance(value, DogmaticDynamicIngredient)):
+                new_fixed_value= DogmaticDynamicIngredient(path=value.path)
+                new_fixed_value.typechanges = fixed_value.typechanges
+                new_fixed_value.fallback_writes =  fixed_value.fallback_writes
+                new_fixed_value.modified= fixed_value.modified
+                new_fixed_value.fixed = fixed_value.fixed
+                new_fixed_value.fallback = fixed_value.fallback
+                fixed_value = new_fixed_value
+                dict.__setitem__(self, key, fixed_value)
             for k, val in value.items():
-                fixed_value[k] = val
+                    fixed_value[k] = val
 
         self._log_blocked_setitem(key, value, fixed_value)
 
@@ -115,6 +126,14 @@ class DogmaticDict(dict):
             if isinstance(self[key], (DogmaticDict, DogmaticList)):
                 missing |= {key + "." + k for k in self[key].revelation()}
         return missing
+
+
+class DogmaticDynamicIngredient(DynamicIngredient, DogmaticDict):
+    def __init__(self, path,fixed=None, fallback=None, *args, **kw):
+        self.path = path
+        DogmaticDict.__init__(self, fixed=fixed,fallback=fallback)
+        dict.__init__(self,  *args, **kw)
+
 
 
 class DogmaticList(list):
@@ -258,6 +277,7 @@ SIMPLIFY_TYPE = {
     dict: dict,
     DogmaticDict: dict,
     DogmaticList: list,
+    DogmaticDynamicIngredient: DynamicIngredient,
 }
 
 # if numpy is available we also want to ignore typechanges from numpy
