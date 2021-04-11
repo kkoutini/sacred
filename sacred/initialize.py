@@ -446,9 +446,9 @@ def create_run(
     sorted_ingredients = included_dynamic_ingredient + gather_ingredients_topological(
         experiment
     )
+    found_dynamic_ingredients = {}
     if include_dynamic_ingredient:
         last_len = -1
-        found_dynamic_ingredients = {}
         found_dynamic_ingredients_load_paths= {}
         while len(found_dynamic_ingredients) > last_len:
             last_len = len(found_dynamic_ingredients)
@@ -495,6 +495,15 @@ def create_run(
         key=lambda p: len(p),
     )
 
+    # add dynamic ingredients as sub-subrunners
+    # this allows functions captured by the parent to use configurations defined by the son
+    for cpath,dyn_ing in found_dynamic_ingredients.items():
+        scaffold_name, suffix = find_best_match(".".join(cpath.split(".")[:-1]), prefixes)
+        assert scaffolding[scaffold_name].subrunners.get("cpath") is None, f"Undefined behavior, multiple dynamic " \
+                                                                           f"ingredients at path {cpath} "
+        dyn_scaffold_name, suffix = find_best_match(cpath, prefixes)
+        assert dyn_scaffold_name == cpath, f"Failed to find the parent of the dynamic ingredient at path {cpath}"
+        scaffolding[scaffold_name].subrunners[cpath] = scaffolding[dyn_scaffold_name]
     # --------- configuration process -------------------
 
     # Phase 1: Config updates
