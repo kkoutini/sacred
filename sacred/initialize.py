@@ -399,6 +399,13 @@ def distribute_top_down_config_override(top_scaff, prefixes, scaffolding):
         set_by_dotted_path(update_cfg, suffix, value)
         set_by_dotted_path(scaff.config_overrides, suffix, value)
         scaff.config_scopes.append(ConfigDict(update_cfg))
+        config_scopes = []
+        # apply config before config funcitons that take parameters
+        for config in scaff.config_scopes:
+            if hasattr(config, "_func") and (len(config.args)>0):
+                config_scopes.append(ConfigDict(update_cfg))
+            config_scopes.append(config)
+        scaff.config_scopes = config_scopes
 
 
 def get_scaffolding_and_config_name(named_config, scaffolding):
