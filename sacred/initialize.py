@@ -2,9 +2,10 @@
 # coding=utf-8
 
 import os
+import sys
 from collections import OrderedDict, defaultdict
 from copy import copy, deepcopy
-from importlib import import_module, reload
+from importlib import import_module
 
 from sacred.config import (
     ConfigDict,
@@ -468,15 +469,20 @@ def create_run(
             for cpath, ing in iterate_over_dynamic_ingredients(prerun.config):
                 # use relaod to get a new instance of the ingredient, in case you want to use it twice.
                 try:
+                    ing_module_path = ing.path.rsplit(".", 1)[0]
+                    # if it's already imported, make a new instance of the module
+                    # this allow importing an ingredient multiple times in different paths.
+                    if ing_module_path in sys.modules:
+                        del sys.modules[ing_module_path]
                     dyn_ing = getattr(
-                        reload(import_module(ing.path.rsplit(".", 1)[0])),
+                        import_module(ing_module_path),
                         ing.path.rsplit(".", 1)[1],
                     )
                 except Exception as e:
                     raise RuntimeError(
                         f"Could not dynamically load ingredient specified in config path `{cpath}`. "
                         f"Make sure `{ing.path}` is importable in your python path. "
-                        f"This can be tested: `from {ing.path.rsplit('.', 1)[0]} "
+                        f"This can be tested: `from {ing_module_path} "
                         f"import {ing.path.rsplit('.', 1)[1]}`"
                     ) from e
                 dyn_ing.path = cpath
