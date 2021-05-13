@@ -355,7 +355,8 @@ def get_command(scaffolding, command_path):
     else:
         if path:
             raise KeyError(
-                'Command "%s" not found in ingredient "%s"' % (command_name, path)
+                'Command "%s" not found in ingredient "%s" possible commands: [%s]' % (command_name, path,
+                                                                                       ",".join(scaffolding[path].commands.keys()))
             )
         else:
             raise KeyError('Command "%s" not found' % command_name)
