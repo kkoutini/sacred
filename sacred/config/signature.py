@@ -15,8 +15,14 @@ POSARG_TYPES = [Parameter.POSITIONAL_ONLY, Parameter.POSITIONAL_OR_KEYWORD]
 
 
 def get_argspec(f):
-    sig = inspect.signature(f)
-    args = [n for n, p in sig.parameters.items() if p.kind in ARG_TYPES]
+    # in case we are dealing with a class, manually get the arguments from the init function (excluding self)
+    if inspect.isclass(f):
+        sig = inspect.signature(f.__init__)
+        # skip self
+        args = [n for n, p in list(sig.parameters.items())[1:] if p.kind in ARG_TYPES]
+    else:
+        sig = inspect.signature(f)
+        args = [n for n, p in sig.parameters.items() if p.kind in ARG_TYPES]
     pos_args = [
         n
         for n, p in sig.parameters.items()
